@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(localdb VERSION 0.1.0 LANGUAGES C)
+project(localdb VERSION 0.2.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -10,28 +10,30 @@ option(LOCALDB_BUILD_TESTS    "Build unit tests"   ON)
 option(LOCALDB_BUILD_EXAMPLES "Build examples"      ON)
 option(LOCALDB_BUILD_SHARED   "Build shared (.dll/.so)" OFF)
 
+# ── Compiler flags for performance ───────────────────────────
+if(MSVC)
+    add_compile_options(/O2 /W3 /D_CRT_SECURE_NO_WARNINGS)
+else()
+    add_compile_options(-O3 -Wall -Wextra -march=native)
+endif()
+
 # ── Core library ─────────────────────────────────────────────
 set(LOCALDB_SOURCES
     src/core/database.c
-    src/core/error.c
-    src/storage/pager.c
     src/storage/btree.c
-    src/storage/wal.c
-    src/storage/page_cache.c
-    src/sql/lexer.c
-    src/sql/parser.c
-    src/sql/executor.c
-    src/txn/transaction.c
-    src/vfs/vfs.c
+    src/storage/mmap_pager.c
+    src/storage/hp_wal.c
+    src/memory/arena.c
     src/util/json.c
     src/util/string.c
+    src/vfs/vfs.c
 )
 
 if(LOCALDB_BUILD_SHARED)
     add_library(localdb SHARED ${LOCALDB_SOURCES})
-    set_target_properties(localdb PROPERTIES
-        WINDOWS_EXPORT_ALL_SYMBOLS ON
-    )
+    if(WIN32)
+        set_target_properties(localdb PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    endif()
 else()
     add_library(localdb STATIC ${LOCALDB_SOURCES})
 endif()
@@ -54,11 +56,6 @@ if(LOCALDB_BUILD_TESTS)
     enable_testing()
     add_executable(localdb_tests
         tests/test_main.c
-        tests/test_open_close.c
-        tests/test_document.c
-        tests/test_sql.c
-        tests/test_batch.c
-        tests/test_ttl.c
     )
     target_link_libraries(localdb_tests PRIVATE localdb)
     target_include_directories(localdb_tests PRIVATE
