@@ -1,0 +1,13 @@
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.pdb
+*.ilk
+.cache/
+compile_commands.json
+.localdb/
